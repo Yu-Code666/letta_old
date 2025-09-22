@@ -430,39 +430,45 @@ def start_server(
             )
 
     else:
+        # 根据操作系统类型显示不同的服务器启动信息
         if IS_WINDOWS:
             # Windows doesn't those the fancy unicode characters
+            # 在Windows系统上显示简单的ASCII字符，避免Unicode字符显示问题
             print(f"Server running at: http://{host or 'localhost'}:{port or REST_DEFAULT_PORT}")
             print(f"View using ADE at: https://app.letta.com/development-servers/local/dashboard\n")
         else:
+            # 在非Windows系统上使用Unicode箭头字符美化输出
             print(f"▶ Server running at: http://{host or 'localhost'}:{port or REST_DEFAULT_PORT}")
             print(f"▶ View using ADE at: https://app.letta.com/development-servers/local/dashboard\n")
 
+        # 检查是否安装了granian包并且配置启用了granian引擎
         if importlib.util.find_spec("granian") is not None and settings.use_granian:
             # Experimental Granian engine
             from granian import Granian
 
+            # 使用Granian ASGI服务器启动应用
             Granian(
-                target="letta.server.rest_api.app:app",
+                target="letta.server.rest_api.app:app",  # 指定ASGI应用的目标路径
                 # factory=True,
-                interface="asgi",
+                interface="asgi",  # 使用ASGI接口
                 address=host or "127.0.0.1",  # Note granian address must be an ip address
-                port=port or REST_DEFAULT_PORT,
-                workers=settings.uvicorn_workers,
+                port=port or REST_DEFAULT_PORT,  # 设置服务器端口
+                workers=settings.uvicorn_workers,  # 设置工作进程数量
                 # runtime_blocking_threads=
                 # runtime_threads=
-                reload=reload or settings.uvicorn_reload,
-                reload_paths=["letta/"],
-                reload_ignore_worker_failure=True,
+                reload=reload or settings.uvicorn_reload,  # 启用代码热重载
+                reload_paths=["letta/"],  # 指定监控重载的路径
+                reload_ignore_worker_failure=True,  # 忽略工作进程失败时的重载
                 reload_tick=4000,  # set to 4s to prevent crashing on weird state
                 # log_level="info"
-            ).serve()
+            ).serve()  # 启动服务器
         else:
+            # 使用默认的uvicorn服务器启动应用
             uvicorn.run(
-                "letta.server.rest_api.app:app",
-                host=host or "localhost",
-                port=port or REST_DEFAULT_PORT,
-                workers=settings.uvicorn_workers,
-                reload=reload or settings.uvicorn_reload,
-                timeout_keep_alive=settings.uvicorn_timeout_keep_alive,
+                "letta.server.rest_api.app:app",  # 指定ASGI应用的目标路径
+                host=host or "localhost",  # 设置服务器主机地址
+                port=port or REST_DEFAULT_PORT,  # 设置服务器端口
+                workers=settings.uvicorn_workers,  # 设置工作进程数量
+                reload=reload or settings.uvicorn_reload,  # 启用代码热重载
+                timeout_keep_alive=settings.uvicorn_timeout_keep_alive,  # 设置保持连接的超时时间
             )

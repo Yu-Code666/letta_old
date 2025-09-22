@@ -1039,23 +1039,29 @@ def modify_message(
     operation_id="send_message",
 )
 async def send_message(
-    agent_id: str,
-    request_obj: Request,  # FastAPI Request
-    server: SyncServer = Depends(get_letta_server),
-    request: LettaRequest = Body(...),
+    agent_id: str,  # 代理ID，用于标识特定的代理
+    request_obj: Request,  # FastAPI Request，FastAPI请求对象
+    server: SyncServer = Depends(get_letta_server),  # 服务器实例，通过依赖注入获取
+    request: LettaRequest = Body(...),  # 请求体，包含消息和配置信息
     actor_id: str | None = Header(None, alias="user_id"),  # Extract user_id from header, default to None if not present
 ):
     """
     Process a user message and return the agent's response.
     This endpoint accepts a message from a user and processes it through the agent.
     """
+    # 记录请求开始时间戳（纳秒级）
     request_start_timestamp_ns = get_utc_timestamp_ns()
+    # 增加用户消息计数器指标
     MetricRegistry().user_message_counter.add(1, get_ctx_attributes())
 
+    # 获取执行操作的用户对象，如果actor_id不存在则使用默认用户
     actor = await server.user_manager.get_actor_or_default_async(actor_id=actor_id)
     # TODO: This is redundant, remove soon
+    # 获取代理对象，包含多代理组关系信息
     agent = await server.agent_manager.get_agent_by_id_async(agent_id, actor, include_relationships=["multi_agent_group"])
+    # 检查代理是否符合条件：没有多代理组或者管理器类型为sleeptime/voice_sleeptime
     agent_eligible = agent.multi_agent_group is None or agent.multi_agent_group.manager_type in ["sleeptime", "voice_sleeptime"]
+    # 检查模型是否兼容，支持的模型端点类型列表
     model_compatible = agent.llm_config.model_endpoint_type in [
         "anthropic",
         "openai",
@@ -1070,8 +1076,11 @@ async def send_message(
     ]
 
     # Create a new run for execution tracking
+    # 如果启用了代理运行跟踪，创建新的作业记录
     if settings.track_agent_run:
+        # 设置作业状态为已创建
         job_status = JobStatus.created
+        # 创建运行作业记录，包含用户ID、状态、元数据和请求配置
         run = await server.job_manager.create_job_async(
             pydantic_job=Run(
                 user_id=actor.id,
@@ -1090,16 +1099,23 @@ async def send_message(
             actor=actor,
         )
     else:
+        # 如果未启用跟踪，run设置为None
         run = None
 
+    # 初始化作业更新元数据
     job_update_metadata = None
     # TODO (cliandy): clean this up
+    # 获取Redis客户端连接
     redis_client = await get_redis_client()
+    # 在Redis中存储运行ID，使用代理ID作为键
     await redis_client.set(f"{REDIS_RUN_ID_PREFIX}:{agent_id}", run.id if run else None)
 
     try:
+        # 如果代理符合条件且模型兼容
         if agent_eligible and model_compatible:
+            # 如果启用了睡眠时间且不是语音对话代理
             if agent.enable_sleeptime and agent.agent_type != AgentType.voice_convo_agent:
+                # 创建睡眠时间多代理循环处理器
                 agent_loop = SleeptimeMultiAgentV2(
                     agent_id=agent_id,
                     message_manager=server.message_manager,
@@ -1113,6 +1129,7 @@ async def send_message(
                     current_run_id=run.id if run else None,
                 )
             else:
+                # 创建标准Letta代理循环处理器
                 agent_loop = LettaAgent(
                     agent_id=agent_id,
                     message_manager=server.message_manager,
@@ -1122,9 +1139,11 @@ async def send_message(
                     passage_manager=server.passage_manager,
                     actor=actor,
                     step_manager=server.step_manager,
+                    # 根据设置选择遥测管理器或空操作管理器
                     telemetry_manager=server.telemetry_manager if settings.llm_api_logging else NoopTelemetryManager(),
                     current_run_id=run.id if run else None,
                     # summarizer settings to be added here
+                    # 根据代理类型设置摘要模式
                     summarizer_mode=(
                         SummarizationMode.STATIC_MESSAGE_BUFFER
                         if agent.agent_type == AgentType.voice_convo_agent
@@ -1132,6 +1151,7 @@ async def send_message(
                     ),
                 )
 
+            # 执行代理步骤处理消息
             result = await agent_loop.step(
                 request.messages,
                 max_steps=request.max_steps,
@@ -1140,6 +1160,7 @@ async def send_message(
                 include_return_message_types=request.include_return_message_types,
             )
         else:
+            # 如果代理不符合条件或模型不兼容，使用服务器的标准消息发送方法
             result = await server.send_message_to_agent(
                 agent_id=agent_id,
                 actor=actor,
@@ -1152,13 +1173,19 @@ async def send_message(
                 assistant_message_tool_kwarg=request.assistant_message_tool_kwarg,
                 include_return_message_types=request.include_return_message_types,
             )
+        # 从结果中获取作业状态
         job_status = result.stop_reason.stop_reason.run_status
+        # 返回处理结果
         return result
     except Exception as e:
+        # 如果发生异常，记录错误信息到作业更新元数据
         job_update_metadata = {"error": str(e)}
+        # 设置作业状态为失败
         job_status = JobStatus.failed
+        # 重新抛出异常
         raise
     finally:
+        # 如果启用了代理运行跟踪，更新作业状态
         if settings.track_agent_run:
             await server.job_manager.safe_update_job_status_async(
                 job_id=run.id,

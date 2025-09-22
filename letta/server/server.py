@@ -724,22 +724,24 @@ class SyncServer(Server):
     # TODO: Deprecate this
     def send_messages(
         self,
-        actor: User,
-        agent_id: str,
-        input_messages: List[MessageCreate],
-        wrap_user_message: bool = True,
-        wrap_system_message: bool = True,
+        actor: User,  # 执行操作的用户对象
+        agent_id: str,  # 目标代理的唯一标识符
+        input_messages: List[MessageCreate],  # 要发送给代理的消息列表
+        wrap_user_message: bool = True,  # 是否包装用户消息，默认为True
+        wrap_system_message: bool = True,  # 是否包装系统消息，默认为True
         interface: Union[AgentInterface, ChatCompletionsStreamingInterface, None] = None,  # needed for responses
         metadata: Optional[dict] = None,  # Pass through metadata to interface
-        put_inner_thoughts_first: bool = True,
+        put_inner_thoughts_first: bool = True,  # 是否将内部思考放在首位，默认为True
     ) -> LettaUsageStatistics:
         """Send a list of messages to the agent."""
 
         # Store metadata in interface if provided
+        # 如果提供了元数据且接口支持元数据属性，则将元数据存储到接口中
         if metadata and hasattr(interface, "metadata"):
             interface.metadata = metadata
 
         # Run the agent state forward
+        # 调用内部_step方法推进代理状态，处理输入消息并返回使用统计信息
         return self._step(
             actor=actor,
             agent_id=agent_id,
