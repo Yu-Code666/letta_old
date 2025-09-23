@@ -16,6 +16,8 @@ DEBUG = False
 def get_ollama_completion(prompt, context_window, settings=SIMPLE, grammar=None):
     """See https://github.com/jmorganca/ollama/blob/main/docs/api.md for instructions on how to run the LLM web server"""
     prompt_tokens = count_tokens(prompt)
+    context_window = int(context_window)
+    
     if prompt_tokens > context_window:
         raise Exception(f"Request exceeds maximum context length ({prompt_tokens} > {context_window} tokens)")
 

@@ -1,0 +1,138 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🚀 调试 Letta 服务器 (简单启动)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/start_letta.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "COMPOSIO_DISABLE_VERSION_CHECK": "true"
+            }
+        },
+        {
+            "name": "🔧 调试 Letta 服务器 (带参数)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_server.py",
+            "args": [
+                "--debug",
+                "--reload",
+                "--port", "8283"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "COMPOSIO_DISABLE_VERSION_CHECK": "true"
+            }
+        },
+        {
+            "name": "⚡ 调试 Letta 服务器 (main.py)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "COMPOSIO_DISABLE_VERSION_CHECK": "true"
+            }
+        },
+        {
+            "name": "🔍 调试 Letta 服务器 (官方方式)",
+            "type": "python",
+            "request": "launch",
+            "module": "letta",
+            "args": [
+                "server",
+                "--debug"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "COMPOSIO_DISABLE_VERSION_CHECK": "true"
+            }
+        },
+        {
+            "name": "🌐 调试 Letta 服务器 (外部访问)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/run_server.py",
+            "args": [
+                "--host", "0.0.0.0",
+                "--port", "8283",
+                "--debug"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "COMPOSIO_DISABLE_VERSION_CHECK": "true"
+            }
+        },
+        {
+            "name": "🧪 调试测试",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "-v",
+                "-s",
+                "${file}"
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "📋 调试当前文件",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            }
+        },
+        {
+            "name": "🐛 调试 Letta CLI",
+            "type": "python",
+            "request": "launch",
+            "module": "letta",
+            "args": [
+            ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}",
+                "COMPOSIO_DISABLE_VERSION_CHECK": "true"
+            }
+        },
+            {
+            "name": "Python: main.py run",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "args": ["run"],
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}
