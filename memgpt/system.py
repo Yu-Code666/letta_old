@@ -80,18 +80,18 @@ def get_login_event(last_login="Never (first login)", include_location=False, lo
 
 
 def package_user_message(user_message, time=None, include_location=False, location_name="San Francisco, CA, USA"):
-    # Package the message with time and location
-    formatted_time = time if time else get_local_time()
+    # 将用户消息打包为包含时间和（可选）地理位置的 JSON 字符串
+    formatted_time = time if time else get_local_time()  # 如果未指定时间，则获取当前本地时间
     packaged_message = {
-        "type": "user_message",
-        "message": user_message,
-        "time": formatted_time,
+        "type": "user_message",    # 消息类型为用户消息
+        "message": user_message,   # 用户提供的消息内容
+        "time": formatted_time,    # 消息的时间戳
     }
 
     if include_location:
-        packaged_message["location"] = location_name
+        packaged_message["location"] = location_name  # 可选：包含位置名称
 
-    return json.dumps(packaged_message)
+    return json.dumps(packaged_message)  # 返回 JSON 格式的字符串
 
 
 def package_function_response(was_success, response_string, timestamp=None):

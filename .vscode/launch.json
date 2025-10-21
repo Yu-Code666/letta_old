@@ -132,7 +132,12 @@
             "args": ["run"],
             "cwd": "${workspaceFolder}",
             "console": "integratedTerminal",
-            "justMyCode": false
+            "justMyCode": false,
+            "env": {
+                "BACKEND_TYPE": "ollama",
+                "OPENAI_API_BASE": "http://localhost:11434",
+                "OLLAMA_MODEL": "hf.co/mradermacher/dolphin-2.2-mistral-7b-GGUF:F16"
+            }
         }
     ]
 }

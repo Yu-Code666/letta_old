@@ -42,71 +42,79 @@ model_choices = [
 
 @dataclass
 class MemGPTConfig:
+    # 配置文件路径，默认为 MEMGPT_DIR 下的 "config"
     config_path: str = os.path.join(MEMGPT_DIR, "config")
+    # 匿名客户端 ID
     anon_clientid: str = None
 
-    # preset
+    # 预设
     preset: str = DEFAULT_PRESET
 
-    # model parameters
+    # 模型相关参数
     # provider: str = "openai"  # openai, azure, local (TODO)
+    # LLM 服务商终端，默认是 openai
     model_endpoint: str = "openai"
+    # 默认模型
     model: str = "gpt-4"  # gpt-4, gpt-3.5-turbo, local
+    # 上下文窗口大小
     context_window: int = LLM_MAX_TOKENS[model] if model in LLM_MAX_TOKENS else LLM_MAX_TOKENS["DEFAULT"]
 
-    # model parameters: openai
+    # OpenAI 专属参数
     openai_key: str = None
 
-    # model parameters: azure
+    # Azure 专属参数
     azure_key: str = None
     azure_endpoint: str = None
     azure_version: str = None
     azure_deployment: str = None
     azure_embedding_deployment: str = None
 
-    # persona parameters
+    # 角色参数
     default_persona: str = personas.DEFAULT
     default_human: str = humans.DEFAULT
     default_agent: str = None
 
-    # embedding parameters
+    # 嵌入相关参数
     embedding_model: str = "openai"
     embedding_dim: int = 1536
     embedding_chunk_size: int = 300  # number of tokens
 
-    # database configs: archival
+    # 数据库配置：归档存储
     archival_storage_type: str = "local"  # local, db
     archival_storage_path: str = None  # TODO: set to memgpt dir
     archival_storage_uri: str = None  # TODO: eventually allow external vector DB
 
-    # database configs: recall
+    # 数据库配置：召回存储
     recall_storage_type: str = "local"  # local, db
     recall_storage_path: str = None  # TODO: set to memgpt dir
     recall_storage_uri: str = None  # TODO: eventually allow external vector DB
 
-    # database configs: agent state
+    # 数据库配置：agent 状态
     persistence_manager_type: str = None  # in-memory, db
     persistence_manager_save_file: str = None  # local file
     persistence_manager_uri: str = None  # db URI
 
     @staticmethod
     def generate_uuid() -> str:
+        # 生成唯一的匿名客户端 ID
         return uuid.UUID(int=uuid.getnode()).hex
 
     @classmethod
     def load(cls) -> "MemGPTConfig":
+        # 加载配置，会优先读取环境变量中的 MEMGPT_CONFIG_PATH
         config = configparser.ConfigParser()
 
-        # allow overriding with env variables
+        # 允许通过环境变量覆盖默认配置路径
         if os.getenv("MEMGPT_CONFIG_PATH"):
             config_path = os.getenv("MEMGPT_CONFIG_PATH")
         else:
             config_path = MemGPTConfig.config_path
 
+        # 如果配置文件存在，则读取配置文件
         if os.path.exists(config_path):
             config.read(config_path)
 
-            # read config values
+            # 读取配置项
             model = config.get("defaults", "model")
             context_window = (
                 int(config.get("defaults", "context_window")) if config.has_option("defaults", "context_window") else LLM_MAX_TOKENS["DEFAULT"]
@@ -117,10 +125,12 @@ class MemGPTConfig:
             default_human = config.get("defaults", "human")
             default_agent = config.get("defaults", "agent") if config.has_option("defaults", "agent") else None
 
+            # OpenAI key
             openai_key, openai_model = None, None
             if "openai" in config:
                 openai_key = config.get("openai", "key")
 
+            # Azure 相关参数
             azure_key, azure_endpoint, azure_version, azure_deployment, azure_embedding_deployment = None, None, None, None, None
             if "azure" in config:
                 azure_key = config.get("azure", "key")
@@ -131,19 +141,22 @@ class MemGPTConfig:
                     config.get("azure", "embedding_deployment") if config.has_option("azure", "embedding_deployment") else None
                 )
 
+            # 嵌入参数
             embedding_model = config.get("embedding", "model")
             embedding_dim = config.getint("embedding", "dim")
             embedding_chunk_size = config.getint("embedding", "chunk_size")
 
-            # archival storage
+            # 归档存储配置
             archival_storage_type, archival_storage_path, archival_storage_uri = "local", None, None
             if "archival_storage" in config:
                 archival_storage_type = config.get("archival_storage", "type")
                 archival_storage_path = config.get("archival_storage", "path") if config.has_option("archival_storage", "path") else None
                 archival_storage_uri = config.get("archival_storage", "uri") if config.has_option("archival_storage", "uri") else None
 
+            # 客户端 ID
             anon_clientid = config.get("client", "anon_clientid")
 
+            # 返回填充好属性的配置实例
             return cls(
                 model=model,
                 context_window=context_window,
@@ -168,6 +181,7 @@ class MemGPTConfig:
                 config_path=config_path,
             )
 
+        # 配置文件不存在时，自动生成 anon_clientid，并保存默认配置
         anon_clientid = MemGPTConfig.generate_uuid()
         config = cls(anon_clientid=anon_clientid, config_path=config_path)
         config.save()  # save updated config

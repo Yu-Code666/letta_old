@@ -58,54 +58,69 @@ def run(
     """
 
     # setup logger
+    # 设置日志记录器的调试模式和日志级别
     utils.DEBUG = debug
     logging.getLogger().setLevel(logging.CRITICAL)
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
 
     if not MemGPTConfig.exists():  # if no config, run configure
+        # 如果配置文件不存在，根据yes参数决定使用默认配置还是运行配置向导
         if yes:
             # use defaults
+            # 使用默认配置
             config = MemGPTConfig()
         else:
             # use input
+            # 运行配置向导获取用户输入
             configure()
             config = MemGPTConfig.load()
     else:  # load config
+        # 加载现有配置文件
         config = MemGPTConfig.load()
 
     # override with command line arguments
+    # 使用命令行参数覆盖配置文件中的设置
     if debug:
         config.debug = debug
     if no_verify:
         config.no_verify = no_verify
 
     # determine agent to use, if not provided
+    # 如果没有指定agent，则确定要使用的agent
     if not yes and not agent:
+        # 获取所有可用的agent配置文件
         agent_files = utils.list_agent_config_files()
         agents = [AgentConfig.load(f).name for f in agent_files]
 
+        # 如果存在agent且没有指定其他参数，询问用户是否选择现有agent
         if len(agents) > 0 and not any([persona, human, model]):
             select_agent = questionary.confirm("Would you like to select an existing agent?").ask()
             if select_agent:
                 agent = questionary.select("Select agent:", choices=agents).ask()
 
     # configure llama index
+    # 配置llama index服务上下文
     config = MemGPTConfig.load()
     original_stdout = sys.stdout  # unfortunate hack required to suppress confusing print statements from llama index
+    # 临时重定向标准输出以抑制llama index的混乱打印语句
     sys.stdout = io.StringIO()
     embed_model = embedding_model()
     service_context = ServiceContext.from_defaults(llm=None, embed_model=embed_model, chunk_size=config.embedding_chunk_size)
     set_global_service_context(service_context)
+    # 恢复标准输出
     sys.stdout = original_stdout
 
     # overwrite the context_window if specified
+    # 如果指定了context_window参数，则覆盖现有的上下文窗口设置
     if context_window is not None and int(context_window) != config.context_window:
         typer.secho(f"Warning: Overriding existing context window {config.context_window} with {context_window}", fg=typer.colors.YELLOW)
         config.context_window = context_window
 
     # create agent config
+    # 创建或加载agent配置
     if agent and AgentConfig.exists(agent):  # use existing agent
+        # 使用现有的agent
         typer.secho(f"Using existing agent {agent}", fg=typer.colors.GREEN)
         agent_config = AgentConfig.load(agent)
         printd("State path:", agent_config.save_state_dir())
@@ -113,6 +128,7 @@ def run(
         printd("Index path:", agent_config.save_agent_index_dir())
         # persistence_manager = LocalStateManager(agent_config).load() # TODO: implement load
         # TODO: load prior agent state
+        # 如果命令行参数与现有配置不同，发出警告并覆盖
         if persona and persona != agent_config.persona:
             typer.secho(f"Warning: Overriding existing persona {agent_config.persona} with {persona}", fg=typer.colors.YELLOW)
             agent_config.persona = persona
@@ -125,12 +141,15 @@ def run(
             typer.secho(f"Warning: Overriding existing model {agent_config.model} with {model}", fg=typer.colors.YELLOW)
             agent_config.model = model
             # raise ValueError(f"Cannot override {agent_config.name} existing model {agent_config.model} with {model}")
+        # 保存更新后的agent配置
         agent_config.save()
 
         # load existing agent
+        # 加载现有的agent实例
         memgpt_agent = Agent.load_agent(memgpt.interface, agent_config)
     else:  # create new agent
         # create new agent config: override defaults with args if provided
+        # 创建新的agent配置，如果提供了参数则覆盖默认值
         typer.secho("Creating new agent...", fg=typer.colors.GREEN)
         agent_config = AgentConfig(
             name=agent if agent else None,
@@ -145,13 +164,16 @@ def run(
         # agent_config.attach_data_source(data_source)
 
         # TODO: allow configrable state manager (only local is supported right now)
+        # 创建持久化管理器（目前只支持本地存储）
         persistence_manager = LocalStateManager(agent_config)  # TODO: insert dataset/pre-fill
 
         # save new agent config
+        # 保存新的agent配置
         agent_config.save()
         typer.secho(f"Created new agent {agent_config.name}.", fg=typer.colors.GREEN)
 
         # create agent
+        # 使用预设创建agent实例
         memgpt_agent = presets.use_preset(
             agent_config.preset,
             agent_config,
@@ -163,13 +185,16 @@ def run(
         )
 
     # start event loop
+    # 启动事件循环
     from memgpt.main import run_agent_loop
 
     # setup azure if using
     # TODO: cleanup this code
+    # 如果使用Azure端点，则配置Azure支持
     if config.model_endpoint == "azure":
         configure_azure_support()
 
+    # 运行agent主循环
     run_agent_loop(memgpt_agent, first, no_verify, config)  # TODO: add back no_verify
 
 
